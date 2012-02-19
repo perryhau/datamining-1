@@ -75,7 +75,11 @@ public class CreatePoint extends ToolJob {
 			
 			Point point = new Point();
 			point.setData(vector);
-			point.setId(Integer.parseInt(uid.toString()));
+			try {
+				point.setId(Integer.parseInt(uid.toString()));
+			}catch(Exception e) {
+				return;
+			}
 			try {
 				context.write(uid, point);
 			} catch (IOException e) {

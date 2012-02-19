@@ -68,31 +68,31 @@ public class CreatePointTest {
 		reduceDriver.runTest();
 	}
 	
-//	@Test
-//	public void testMapReduce() {
-//		mapreduceDriver.addInput(new Text("1"), new Text("123,time"));
-//		mapreduceDriver.addInput(new Text("1"), new Text("123,time"));
-//		mapreduceDriver.addInput(new Text("1"), new Text("123,time"));
-//		mapreduceDriver.addInput(new Text("3"), new Text("123,time"));
-//		mapreduceDriver.addInput(new Text("3"), new Text("123,time"));
-//		
-//		List<Double> list1 = new ArrayList<Double>();
-//		VectorWritable vector1 = new VectorWritable();
-//		list1.add(2.0);
-//		list1.add(0.);
-//		list1.add(3.0);
-//		vector1.setData(list1);
-//		
-//		Point point = new Point();
-//		point.setData(vector1);
-//		point.setId(123);
-//		
-//		Configuration conf = new Configuration();
-//		conf.set("nidFile", "nidFile.txt");
-//		mapreduceDriver.setConfiguration(conf);
-//		mapreduceDriver.addOutput(new Text("123"), point);
-//		
-//		mapreduceDriver.runTest();
-//	}
+	@Test
+	public void testMapReduce() {
+		mapreduceDriver.addInput(new Text("1136659"), new Text("9991157,2011-12-11:10:15:11"));
+		mapreduceDriver.addInput(new Text("1136659"), new Text("9991157,2011-12-11:10:14:11"));
+		mapreduceDriver.addInput(new Text("1145866"), new Text("9991157,2011-12-11:10:01:11"));
+		mapreduceDriver.addInput(new Text("1153533"), new Text("9991157,2011-12-11:11:24:11"));
+		mapreduceDriver.addInput(new Text("1153533"), new Text("9991157,2011-12-11:11:25:11"));
+		
+		List<Double> list1 = new ArrayList<Double>();
+		VectorWritable vector1 = new VectorWritable();
+		list1.add(2.0);
+		list1.add(2.);
+		list1.add(1.0);
+		vector1.setData(list1);
+		
+		Point point = new Point();
+		point.setData(vector1);
+		point.setId(9991157);
+		
+		Configuration conf = new Configuration();
+		conf.set("nidFile", "nidFile2.txt");
+		mapreduceDriver.setConfiguration(conf);
+		mapreduceDriver.addOutput(new Text("9991157"), point);
+		
+		mapreduceDriver.runTest();
+	}
 	
 }
