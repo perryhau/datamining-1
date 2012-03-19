@@ -10,9 +10,19 @@ import java.util.Map;
 
 import org.apache.hadoop.io.Writable;
 
-public class VectorWritable implements Writable{
+public class VectorWritable implements Writable, Cloneable{
 
-	private Map<Integer,Double> data = new HashMap<Integer,Double>();
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+
+		VectorWritable vectorWritable =  (VectorWritable) super.clone();
+		vectorWritable.data = (HashMap<Integer, Double>) data.clone();
+		
+		return vectorWritable;
+		
+	}
+
+	private HashMap<Integer,Double> data = new HashMap<Integer,Double>();
 	private int columnNum = 0;
 	public VectorWritable() {
 		
@@ -33,7 +43,7 @@ public class VectorWritable implements Writable{
 		}
 	}
 	
-	public void setData(Map<Integer,Double> data) {
+	public void setData(HashMap<Integer,Double> data) {
 		this.data = data;
 	}
 	
@@ -61,6 +71,8 @@ public class VectorWritable implements Writable{
 	@Override
 	public void readFields(DataInput in) throws IOException {
 		int mapSize = in.readInt();
+		setColumnNum(in.readInt());
+		data.clear();
 		for (int i=0; i<mapSize; i++) {
 			data.put(in.readInt(), in.readDouble());
 		}
@@ -70,6 +82,7 @@ public class VectorWritable implements Writable{
 	@Override
 	public void write(DataOutput out) throws IOException {
 		out.writeInt(getSize());
+		out.writeInt(getColumnNum());
 		for (Map.Entry<Integer, Double> entry : data.entrySet()) {
 //			out.write(entry.getKey().intValue());
 			out.writeInt(entry.getKey().intValue());

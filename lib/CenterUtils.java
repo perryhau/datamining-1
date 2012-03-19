@@ -10,62 +10,82 @@ import java.util.Random;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 
 import diatance.EuclideanDistance;
 
 public class CenterUtils {
+	private Configuration conf;
 
-	public static void createRandomCenter(int k, String pointFile, String outputFile) {
-		List<Point> centerList ;
+	public CenterUtils(Configuration conf) {
+		this.conf = conf;
+	}
+
+	public void createRandomCenter(int k, String pointFile, String outputFile) {
+		List<Point> centerList;
 		try {
-			centerList = randomInitialCenter(k,pointFile);
-			writeCenter(centerList,outputFile);
+			centerList = randomInitialCenter(k, pointFile);
+			System.out.println("centers:");
+			for (Point point : centerList) {
+				System.out.println(point);
+			}
+			writeCenter(centerList, outputFile);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
-	
-	public static double compareCentorid(List<Point> centerList1, List<Point> centerList2) {
-		if (centerList1.size() != centerList1.size()) {
+
+	public double compareCentorid(List<Point> centerList1,
+			List<Point> centerList2) {
+		if (centerList1.size() != centerList2.size()) {
 			return -1.;
 		}
-		int size = centerList1.size();
+		int size = centerList1.size()>centerList2.size()?centerList2.size():centerList1.size();
 		double var = 0;
 		EuclideanDistance distance = new EuclideanDistance();
-		for (int i=0; i<size; i++) {
-			var += distance.computeDistance(centerList1.get(i), centerList2.get(i));
+		for (int i = 0; i < size; i++) {
+			if (centerList1.get(i) == null || centerList2.get(i) == null) {
+				return var;
+			}
+			var += distance.computeDistance(centerList1.get(i),
+					centerList2.get(i));
 		}
-		
+
 		return var;
 	}
-	
-	public static void writeCenter(List<Point> centerList, String outputFile) throws IOException {
-		Configuration conf = new Configuration();
-		FileSystem fs = FileSystem.get(URI.create(outputFile),conf);
-		
-		SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, new Path(outputFile), Text.class, Point.class);
+
+	public void writeCenter(List<Point> centerList, String outputFile)
+			throws IOException {
+
+		FileSystem fs = FileSystem.get(URI.create(outputFile), conf);
+
+		SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf,
+				new Path(outputFile), IntWritable.class, Point.class);
 		for (Point center : centerList) {
-			writer.append(new Text("center"), center);
+			writer.append(new IntWritable(center.getId()), center);
 		}
 		writer.close();
-		fs.close();
-		
+		IOUtils.closeStream(writer);
+
 	}
-	
-	public static List<Point> randomInitialCenter(int k,String fileUri) throws IOException {
+
+	public List<Point> randomInitialCenter(int k, String fileUri)
+			throws IOException {
 		List<Point> pointList = readPoint(fileUri);
-		
+
 		Set<Integer> centerSet = new HashSet<Integer>();
 		Random randomGenerator = new Random();
-		while(centerSet.size()<k) {
+		while (centerSet.size() < k) {
 			centerSet.add(randomGenerator.nextInt(pointList.size()));
 		}
-		
+
 		List<Point> centerList = new ArrayList<Point>();
 		int index = 0;
 		for (Integer i : centerSet) {
@@ -74,60 +94,80 @@ public class CenterUtils {
 			centerList.add(pointList.get(i));
 			index++;
 		}
-		
-		return pointList;
+
+		return centerList;
 	}
-	
-	public static List<Point> readPoint(String fileUri) throws IOException {
+
+	public List<Point> readPointFile(String fileUri) throws IOException {
 		List<Point> pointList = new ArrayList<Point>();
-		
-		Configuration conf = new Configuration();
+
 		FileSystem fs = FileSystem.get(URI.create(fileUri), conf);
 		Path path = new Path(fileUri);
-		
-		SequenceFile.Reader reader = null;
-		
 
-		Point point = new Point();
+		SequenceFile.Reader reader = null;
+
 		try {
 			reader = new SequenceFile.Reader(fs, path, conf);
-			reader.next(new Text("point"), point);
-			pointList.add(point);
+			IntWritable key = new IntWritable();
+			Point point = new Point();
+			while (reader.next(key, point)) {
+				pointList.add((Point) point.clone());
+			}
+
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} finally {
-			reader.close();
-			fs.close();	
-		}
-		reader.close();
-		fs.close();
-		
-		return pointList;
-	}
-	
-	public static void main (String[] args) {
-		try {
-			List<Double> list1 = new ArrayList<Double>();
-			VectorWritable vector1 = new VectorWritable(5);
-			list1.add(2.0);
-			list1.add(0.);
-			list1.add(3.0);
-			vector1.setData(list1);
-			
-			Point point = new Point();
-			point.setData(vector1);
-			point.setId(123);
-			List<Point> centerList = new ArrayList<Point>();
-			centerList.add(point);
-			CenterUtils.writeCenter(centerList, "aa.seq");
-
-		} catch (IOException e) {
+		} catch (CloneNotSupportedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} finally {
+			IOUtils.closeStream(reader);
+			// reader.close();
+			// fs.close();
+		}
+		// reader.close();
+		// fs.close();
+
+		return pointList;
+	}
+
+	public List<Point> readPoint(String fileUri) throws IOException {
+
+		FileSystem fs = FileSystem.get(URI.create(fileUri), conf);
+		Path path = new Path(fileUri);
+		FileStatus fileStatus = fs.getFileStatus(path);
+		if (fileStatus.isDir()) {
+			FileStatus[] fileStatusList = fs.listStatus(path);
+			List<Point> pointsList = new ArrayList<Point>();
+			for (FileStatus fileStatus2 : fileStatusList) {
+				if (fileStatus2.getPath().getName().matches(".*part-r.*")) {
+					pointsList.addAll(readPointFile(fileStatus2.getPath()
+							.toString()));
+				}
+			}
+
+			return pointsList;
+		} else {
+			return readPointFile(fileUri);
+		}
+
+	}
+
+	public static void main(String[] args) {
+		List<String> a = new ArrayList<String>();
+		a.add("a");
+		a.add("b");
+		a.add(null);
+		
+		List<String> b = new ArrayList<String>();
+		b.add("c");
+		b.add("c");
+		
+		if (a.size() == b.size()) {
+			System.out.println("ok");
 		}
 	}
 }

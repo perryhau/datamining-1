@@ -7,6 +7,7 @@ import lib.Point;
 import lib.VectorWritable;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mrunit.mapreduce.MapDriver;
 import org.apache.hadoop.mrunit.mapreduce.MapReduceDriver;
@@ -21,18 +22,18 @@ public class CreatePointTest {
 	
 	private CreatePoint.MyMapper mapper;
 	private CreatePoint.MyReducer reducer;
-	private MapReduceDriver<Text, Text, Text, Text,Text,Point> mapreduceDriver;
+	private MapReduceDriver<Text, Text, Text, Text,IntWritable,Point> mapreduceDriver;
 	private MapDriver<Text, Text, Text, Text> mapDriver;
-	private ReduceDriver<Text, Text, Text, Point> reduceDriver;
+	private ReduceDriver<Text, Text, IntWritable, Point> reduceDriver;
 	
 
 	@Before
 	public void setUp() {
 		mapper = new CreatePoint.MyMapper();
 		reducer = new CreatePoint.MyReducer();
-		mapreduceDriver = new MapReduceDriver<Text, Text, Text, Text,Text,Point>();
+		mapreduceDriver = new MapReduceDriver<Text, Text, Text, Text,IntWritable,Point>();
 		mapDriver = new MapDriver<Text, Text, Text, Text>();
-		reduceDriver = new ReduceDriver<Text, Text, Text, Point>();
+		reduceDriver = new ReduceDriver<Text, Text, IntWritable, Point>();
 		mapreduceDriver.setMapper(mapper);
 		mapreduceDriver.setReducer(reducer);
 		mapDriver.setMapper(mapper);
@@ -63,7 +64,7 @@ public class CreatePointTest {
 		Configuration conf = new Configuration();
 		conf.set("nidFile", "nidFile.txt");
 		reduceDriver.setConfiguration(conf);
-		reduceDriver.addOutput(new Text("123"), point);
+		reduceDriver.addOutput(new IntWritable(123), point);
 		
 		reduceDriver.runTest();
 	}
@@ -90,7 +91,7 @@ public class CreatePointTest {
 		Configuration conf = new Configuration();
 		conf.set("nidFile", "nidFile2.txt");
 		mapreduceDriver.setConfiguration(conf);
-		mapreduceDriver.addOutput(new Text("9991157"), point);
+		mapreduceDriver.addOutput(new IntWritable(9991157), point);
 		
 		mapreduceDriver.runTest();
 	}

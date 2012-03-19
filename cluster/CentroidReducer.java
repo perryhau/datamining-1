@@ -10,12 +10,12 @@ import lib.VectorWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Reducer;
 
-public class CentroidReducer extends Reducer<Point,Point,IntWritable,Point>{
+public class CentroidReducer extends Reducer<IntWritable,Point,IntWritable,Point>{
 	
 	@Override
-	public void reduce (Point center, Iterable<Point> points, Context context) {
+	public void reduce (IntWritable centerId, Iterable<Point> points, Context context) {
 		Point newCenter = createNewCenter(points);
-		newCenter.setId(center.getId());
+		newCenter.setId(centerId.get());
 		
 		try {
 			context.write(new IntWritable(newCenter.getId()), newCenter);
@@ -30,7 +30,7 @@ public class CentroidReducer extends Reducer<Point,Point,IntWritable,Point>{
 
 	private Point createNewCenter(Iterable<Point> points) {
 		Point center = new Point();
-		Map<Integer,Double> sumMap = new HashMap<Integer,Double>();
+		HashMap<Integer,Double> sumMap = new HashMap<Integer,Double>();
 		int count=0;
 		for (Point point : points) {
 			Map<Integer,Double> data = point.getData().getData();

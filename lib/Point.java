@@ -6,8 +6,17 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 
-public class Point implements Writable {
+public class Point implements Writable, Cloneable {
 
+	@Override
+	protected Object clone() throws CloneNotSupportedException {
+
+		Point point = (Point) super.clone();
+		point.data = (VectorWritable) data.clone();
+		
+		return point;
+	}
+	
 	private int id = 0;
 	private VectorWritable data = new VectorWritable();
 	
@@ -26,6 +35,7 @@ public class Point implements Writable {
 	@Override
 	public void readFields(DataInput in) throws IOException {
 		id = in.readInt();
+		data =  new VectorWritable();
 		data.readFields(in);
 	}
 
@@ -51,7 +61,7 @@ public class Point implements Writable {
 	@Override
 	public String toString() {
 
-		return id+data.toString();
+		return id+"--"+data.toString();
 	}
 	
 	

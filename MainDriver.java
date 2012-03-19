@@ -4,10 +4,13 @@ import java.util.Map;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import cluster.CentroidRunJob;
-
 import preData.CreatePoint;
 import preData.UniqueNidJob;
+import test.File;
+import test.ReadPoint;
+import test.WritePoint;
+import cluster.CentroidRunJob;
+import cluster.RunCentroid;
 
 public class MainDriver {
 
@@ -16,8 +19,12 @@ public class MainDriver {
 	public MainDriver() {
 
 		add("uniqueNid", UniqueNidJob.class);
-		add("createVector", CreatePoint.class);
+		add("createPoint", CreatePoint.class);
 		add("centroid", CentroidRunJob.class);
+		add("test", File.class);
+		add("testC", RunCentroid.class);
+		add("testW", WritePoint.class);
+		add("testR", ReadPoint.class);
 	}
 
 	public static void main (String[] args) throws Exception {

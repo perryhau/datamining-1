@@ -3,22 +3,22 @@ package cluster;
 import java.io.IOException;
 import java.util.List;
 
-import lib.Contants;
 import lib.CenterUtils;
+import lib.Contants;
 import lib.Point;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import diatance.EuclideanDistance;
 
-public class CentroidMapper extends Mapper<Text,Point,Point,Point>{
+public class CentroidMapper extends Mapper<IntWritable,Point,IntWritable,Point>{
 
 	private List<Point> centerList;
 	
 	@Override
-	public void map(Text key, Point point, Context context) {
+	public void map(IntWritable key, Point point, Context context) {
 		double shortest = Double.MAX_VALUE;
 		Point shortestCenter = null;
 		for (Point center : centerList) {
@@ -33,7 +33,7 @@ public class CentroidMapper extends Mapper<Text,Point,Point,Point>{
 			return;
 		
 		try {
-			context.write(shortestCenter, point);
+			context.write(new IntWritable(shortestCenter.getId()), point);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -49,7 +49,8 @@ public class CentroidMapper extends Mapper<Text,Point,Point,Point>{
 		String centerFile = conf.get(Contants.CENTROID_FILE);
 		
 		try {
-			centerList = CenterUtils.readPoint(centerFile);
+			CenterUtils centerUtils = new CenterUtils(conf);
+			centerList = centerUtils.readPoint(centerFile);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

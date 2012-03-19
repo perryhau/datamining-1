@@ -1,9 +1,11 @@
 package preData;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -14,7 +16,9 @@ import lib.ToolJob;
 import lib.VectorWritable;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -49,12 +53,12 @@ public class CreatePoint extends ToolJob {
 		}
 	}
 
-	public static class MyReducer extends Reducer<Text, Text, Text, Point> {
+	public static class MyReducer extends Reducer<Text, Text, IntWritable, Point> {
 		private Map<String,Integer> nidMap = new HashMap<String,Integer>();
 
 		@Override
 		public void reduce(Text uid, Iterable<Text> nidList, Context context) {
-			Map<Integer,Double> data = new HashMap<Integer,Double>();
+			HashMap<Integer,Double> data = new HashMap<Integer,Double>();
 			
 			for (Text nid : nidList) {
 				if (!nidMap.containsKey(nid.toString())) {
@@ -72,6 +76,7 @@ public class CreatePoint extends ToolJob {
 			
 			VectorWritable vector = new VectorWritable(nidMap.size());
 			vector.setData(data);
+			vector.setColumnNum(nidMap.size());
 			
 			Point point = new Point();
 			point.setData(vector);
@@ -81,7 +86,7 @@ public class CreatePoint extends ToolJob {
 				return;
 			}
 			try {
-				context.write(uid, point);
+				context.write(new IntWritable(point.getId()), point);
 			} catch (IOException e) {
 
 				e.printStackTrace();
@@ -94,13 +99,32 @@ public class CreatePoint extends ToolJob {
 		@Override
 		protected void setup(Context context) {
 			Configuration conf = context.getConfiguration();
-			String nidFile = conf.get("nidFile");
-
+//			String nidFile = conf.get("nidFile");
+			try {
+				URI[] uriList = DistributedCache.getCacheFiles(conf);
+				for (URI uri : uriList) {
+					logger.debug(uri);
+					System.out.print("uri:------"+uri);
+				}
+				Path[] paths = DistributedCache.getLocalCacheFiles(conf);
+				for( Path path :  paths) {
+					System.out.println("path:===="+path);
+				}
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 			FileReader fr;
 			Set<String> nidSet = new HashSet<String>();
 			
 			try {
-				fr = new FileReader(nidFile);
+				Path[] paths = DistributedCache.getLocalCacheFiles(conf);
+				File file = new File(paths[0].toString());
+				if (file.exists()) {
+					System.out.println("exists file:---"+file);
+				}
+				
+				fr = new FileReader(paths[0].toString());
 				BufferedReader br = new BufferedReader(fr);
 				String line = "";
 				while ((line = br.readLine()) != null) {
@@ -109,6 +133,7 @@ public class CreatePoint extends ToolJob {
 						continue;
 					String nid = tmp1[0];
 					nidSet.add(nid);
+					System.out.println("nid:    "+nid);
 					
 				}
 				br.close();
@@ -116,7 +141,7 @@ public class CreatePoint extends ToolJob {
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-			}// ´´½¨FileReader¶ÔÏó£¬ÓÃÀ´¶ÁÈ¡×Ö·ûÁ÷
+			}// ï¿½ï¿½ï¿½ï¿½FileReaderï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½Ö·ï¿½ï¿½ï¿½
 			catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -134,33 +159,40 @@ public class CreatePoint extends ToolJob {
 	/* (non-Javadoc)
 	 * @see org.apache.hadoop.util.Tool#run(java.lang.String[])
 	 * 
-	 * ÊäÈë¸ñÊ½ÎªSequenceFile¸ñÊ½µÄclickÈÕÖ¾nid->uid,time
+	 * ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ÎªSequenceFileï¿½ï¿½Ê½ï¿½ï¿½clickï¿½ï¿½Ö¾nid->uid,time
 	 */
 	@Override
 	public int run(String[] args) throws Exception {
-		if (args.length != 3) {
+		if (args.length != 2) {
 			System.out.println("wrong number of args");
 			return 0;
 		}
 		String input = args[0];
 		String output = args[1];
-		String nidFile = args[2];
+//		String nidFile = args[2];
+		
+		
 
 		Configuration conf = getConf();
-		conf.set("nidFile", nidFile);
+		
+//		DistributedCache.addCacheFile(new URI(nidFile), conf);
+//		nidFile = nidFile.substring(nidFile.lastIndexOf("/")+1,nidFile.length());
+//		conf.set("nidFile", nidFile);
+		
 		Job job = new Job(conf, "createVector");
 		job.setJarByClass(CreatePoint.class);
 		job.setMapperClass(MyMapper.class);
 		job.setMapOutputKeyClass(Text.class);
 		job.setMapOutputValueClass(Text.class);
 		job.setReducerClass(MyReducer.class);
-		job.setOutputKeyClass(Text.class);
-		job.setOutputValueClass(VectorWritable.class);
+		job.setOutputKeyClass(IntWritable.class);
+		job.setOutputValueClass(Point.class);
 		job.setInputFormatClass(SequenceFileInputFormat.class);
 		job.setOutputFormatClass(SequenceFileOutputFormat.class);
 		
 		FileInputFormat.addInputPath(job, new Path(input));
 		FileOutputFormat.setOutputPath(job, new Path(output));
+		
 		
 		if (job.waitForCompletion(true))
 			return 1;
